@@ -1,0 +1,65 @@
+const { bot } = require("../lib");
+
+bot(
+  {
+    pattern: "kickall ?(.*)",
+    fromMe: true,
+    desc: "Kick all members from the group",
+    type: "group",
+  },
+  async (message, match) => {
+    if (!message.isGroup)
+      return message.reply("❌ This command only works in groups.");
+
+    if (match.trim().toLowerCase() !== "confirm") {
+      return message.reply(
+        "⚠️ *KICKALL WARNING*\n\n" +
+        "This will kick all members the bot has permission to remove.\n\n" +
+        "Use:\n" +
+        "`.kickall confirm`"
+      );
+    }
+
+    try {
+      const metadata = await message.client.groupMetadata(message.jid);
+      const botId = message.client.user.id.split(":")[0] + "@s.whatsapp.net";
+
+      const members = metadata.participants
+        .filter((user) => user.id !== botId)
+        .map((user) => user.id);
+
+      if (!members.length)
+        return message.reply("❌ No members found to kick.");
+
+      let kicked = 0;
+
+      for (const member of members) {
+        try {
+          await message.client.groupParticipantsUpdate(
+            message.jid,
+            [member],
+            "remove"
+          );
+
+          kicked++;
+        } catch (e) {
+          console.log(`Couldn't kick ${member}:`, e.message);
+        }
+      }
+
+      await message.reply(
+        "╭━━━〔 ⚡ KICKALL 〕━━━╮\n" +
+        `│ 👥 Kicked: ${kicked}\n` +
+        "│ 👑 Kicked By: BrOvHi\n" +
+        "╰━━━━━━━━━━━━━━━━╯"
+      );
+
+    } catch (error) {
+      console.error(error);
+      await message.reply(
+        "❌ Failed.\n\n" +
+        "Make sure the bot is an admin of this group."
+      );
+    }
+  }
+);
